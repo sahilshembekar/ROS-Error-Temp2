@@ -1,0 +1,51 @@
+<launch>
+	<!-- contains comment for reference purposes-->
+
+	<!-- map_server  -->
+	<!-- Node which provides map data as a ROS service to other nodes e.g. AMCL node 
+  		It will locate the map in map setup step & send it out as map data -->
+	<!-- Argument of the path to map file. To easily change the map loaded and avoid typing paths again -->
+	
+	<arg name="map_file" default="$(find my_robot)/maps/map.yaml"/>
+	<node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+
+	<!-- amcl  -->
+    	<node name="amcl" pkg="amcl" type="amcl" output="screen">
+
+	<!--By default, amcl package looks for the scan topic for LiDAR data. Hokuyo LiDAR sensor used by us actually publishes on my_robot/laser/scan topic. Use the remap tag to remap the topic name scan to the actual topic name for the amcl package to use -->
+
+	<remap from="/scan" to="/my_robot/laser/scan"/> 
+	
+	<!-- amcl parameters  -->
+	<param name="odom_frame_id" value="odom"/>
+	<param name="odom_model_type" value="diff-corrected"/>
+	<param name="base_frame_id" value="robot_footprint"/>
+	<param name="global_frame_id" value="map"/>
+
+	<!-- Define initial pose -->
+	<param name="initial_pose_x" value="-0.3"/>
+	<param name="initial_pose_y" value="-2.0"/>
+ 	<param name="initial_pose_a" value="-1.601" /> <!-- Rotation is important for Rviz to match in Gazebo  -->
+
+
+	</node>
+
+
+  	<!-- Move Base -->
+	<!--  A navigation goal position for robot in the map, and the robot will navigate to that goal position. Uses a costmap where map is divided into 2 parts- occupied & unoccupied. As robot moves, local costmap is continuously updated in relation to a global costmap. This defines a continuous path for the robot to move along. Works like obstacle avoidance algo and finds a clear path  -->
+  	<node name="move_base" pkg="move_base" type="move_base" respawn="false" output="screen">
+
+	<remap from="/scan" to="my_robot/laser/scan"/>
+
+	<!-- move_base parameters -->
+	<param name="base_global_planner" value="navfn/NavfnROS" />
+  	<param name="base_local_planner" value="base_local_planner/TrajectoryPlannerROS"/>
+
+	<!-- Below parameters loaded feom config folder -->
+	<rosparam file="$(find my_robot)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find my_robot)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	<rosparam file="$(find my_robot)/config/local_costmap_params.yaml" command="load" />
+	<rosparam file="$(find my_robot)/config/global_costmap_params.yaml" command="load" />
+	<rosparam file="$(find my_robot)/config/base_local_planner_params.yaml" command="load" />
+	</node>
+</launch>
